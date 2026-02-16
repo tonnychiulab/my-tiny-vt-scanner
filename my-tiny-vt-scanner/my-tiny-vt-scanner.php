@@ -1,10 +1,14 @@
 <?php
 
 /**
- * Plugin Name: my-tiny-vt-scanner
+ * Plugin Name: My Tiny VT Scanner
  * Description: 輕量級 VirusTotal API v3 整合工具，支援 IP 與 URL 風險掃描與正規化驗證。
  * Version: 1.1
  * Author: BMI Security Team
+ * License: GPLv2 or later
+ * License URI: http://www.gnu.org/licenses/gpl-2.0.html
+ * Requires at least: 6.9
+ * Requires PHP: 8.3
  */
 
 if (! defined('ABSPATH')) exit;
@@ -17,7 +21,9 @@ class My_Tiny_VT_Scanner
     public function __construct()
     {
         // 🌍 載入多國語系支援
-        add_action('plugins_loaded', [$this, 'load_textdomain']);
+        // Note: WordPress 4.6+ automatically loads translations from the 'languages' directory
+        // if the text domain matches the plugin slug.
+        // add_action('plugins_loaded', [$this, 'load_textdomain']);
 
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
@@ -29,11 +35,11 @@ class My_Tiny_VT_Scanner
         add_action('rest_api_init', [$this, 'register_rest_routes']);
     }
 
-    // 📌 0-1. 載入翻譯檔
-    public function load_textdomain()
-    {
-        load_plugin_textdomain('my-tiny-vt-scanner', false, dirname(plugin_basename(__FILE__)) . '/languages');
-    }
+    // 📌 0-1. 載入翻譯檔 (Deprecated since WP 4.6 if using standard path)
+    // public function load_textdomain()
+    // {
+    //     load_plugin_textdomain('my-tiny-vt-scanner', false, dirname(plugin_basename(__FILE__)) . '/languages');
+    // }
 
     // 📌 0. 註冊 REST API 路徑
     // 這裡定義了我們的「新窗口」。
@@ -54,7 +60,47 @@ class My_Tiny_VT_Scanner
     // 這一步是為了讓 JJ 哥在 WordPress 的左側黑色選單裡，找到我們的外掛入口。
     public function add_admin_menu()
     {
-        add_menu_page('My Tiny VT', 'My Tiny VT', 'manage_options', 'my-tiny-vt-scanner', [$this, 'render_admin_page'], 'dashicons-shield-alt');
+        add_menu_page(
+            __('My Tiny VT Scanner', 'my-tiny-vt-scanner'),
+            __('My Tiny VT Scanner', 'my-tiny-vt-scanner'),
+            'manage_options',
+            'my-tiny-vt-scanner',
+            [$this, 'render_admin_page'],
+            'dashicons-shield',
+            99
+        );
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+    }
+
+    // 📌 1.5 Enqueue Scripts and Styles
+    public function enqueue_admin_assets($hook)
+    {
+        if ($hook !== 'toplevel_page_my-tiny-vt-scanner') {
+            return;
+        }
+
+        wp_enqueue_style('my-tiny-vt-admin-css', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], '1.1');
+        wp_enqueue_script('my-tiny-vt-admin-js', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', ['jquery'], '1.1', true);
+
+        wp_localize_script('my-tiny-vt-admin-js', 'tinyVtVars', [
+            'rest_url' => rest_url('tiny-vt/v1/scan'),
+            'nonce' => wp_create_nonce('wp_rest'),
+            'scanning_msg' => __('Scanning and analyzing...', 'my-tiny-vt-scanner'),
+            'empty_target_msg' => __('Please enter a target!', 'my-tiny-vt-scanner'),
+            'scan_report_msg' => __('Scan Report', 'my-tiny-vt-scanner'),
+            'target_msg' => __('Target', 'my-tiny-vt-scanner'),
+            'malicious_msg' => __('Malicious', 'my-tiny-vt-scanner'),
+            'suspicious_msg' => __('Suspicious', 'my-tiny-vt-scanner'),
+            'harmless_msg' => __('Harmless', 'my-tiny-vt-scanner'),
+            'undetected_msg' => __('Undetected', 'my-tiny-vt-scanner'),
+            'timeout_msg' => __('Timeout', 'my-tiny-vt-scanner'),
+            'confirmed_timeout_msg' => __('Confirmed Timeout', 'my-tiny-vt-scanner'),
+            'failure_msg' => __('Failure', 'my-tiny-vt-scanner'),
+            'type_unsupported_msg' => __('Type Unsupported', 'my-tiny-vt-scanner'),
+            'synced_msg' => __('Detailed results synced to BMI logs.', 'my-tiny-vt-scanner'),
+            'unknown_error_msg' => __('Unknown Error', 'my-tiny-vt-scanner'),
+            'scan_failed_msg' => __('Scan Failed', 'my-tiny-vt-scanner')
+        ]);
     }
 
     // 📌 2. 註冊設定項與驗證邏輯
@@ -118,95 +164,61 @@ class My_Tiny_VT_Scanner
         $options = get_option($this->option_name);
 ?>
         <div class="wrap">
-            <h1>🛡️ <?php _e('My Tiny VT Scanner', 'my-tiny-vt-scanner'); ?></h1>
-            <p><?php _e('A lightweight VirusTotal API v3 integration tool for BMI-ADAR architecture.', 'my-tiny-vt-scanner'); ?></p>
+            <h1>🛡️ <?php esc_html_e('My Tiny VT Scanner', 'my-tiny-vt-scanner'); ?></h1>
+            <p><?php esc_html_e('A lightweight VirusTotal API v3 integration tool for BMI-ADAR architecture.', 'my-tiny-vt-scanner'); ?></p>
 
-            <form method="post" action="options.php">
+            <form method="post" action="options.php" class="tiny-api-form">
                 <?php settings_fields('tiny_vt_group'); ?>
-                <table class="form-table">
-                    <tr>
-                        <th><?php _e('VirusTotal API Key', 'my-tiny-vt-scanner'); ?></th>
-                        <td>
-                            <input type="password" name="my_tiny_vt_settings[api_key]" value="<?php echo esc_attr($options['api_key'] ?? ''); ?>" class="regular-text">
-                            <p class="description"><?php _e('Enter your VT v3 API Key and save. The system will automatically verify it.', 'my-tiny-vt-scanner'); ?></p>
-                        </td>
-                    </tr>
-                </table>
-                <?php submit_button(__('Verify & Save Settings', 'my-tiny-vt-scanner')); ?>
+                <div class="tiny-api-container">
+                    <label for="tiny_api_key" class="tiny-api-label">🔑 <?php esc_html_e('VirusTotal API Key', 'my-tiny-vt-scanner'); ?></label>
+                    <div class="tiny-api-wrapper">
+                        <input type="password" id="tiny_api_key" name="my_tiny_vt_settings[api_key]" value="<?php echo esc_attr($options['api_key'] ?? ''); ?>" class="regular-text" placeholder="Enter your VT API Key">
+                        <?php submit_button(__('Verify & Save', 'my-tiny-vt-scanner'), 'primary', 'submit', false, ['title' => __('Validate Key with VT and save settings', 'my-tiny-vt-scanner')]); ?>
+                    </div>
+                    <p class="description"><?php esc_html_e('Enter your VT v3 API Key and save. The system will automatically verify it.', 'my-tiny-vt-scanner'); ?></p>
+                </div>
             </form>
 
             <hr style="margin:30px 0;">
 
-            <div class="tiny-query-container" style="background:#fff; border:1px solid #ccd0d4; padding:20px; max-width:800px;">
-                <h2>🔍 <?php _e('Real-time Risk Scanner', 'my-tiny-vt-scanner'); ?></h2>
-                <table class="form-table">
-                    <tr>
-                        <th><?php _e('Scan Type', 'my-tiny-vt-scanner'); ?></th>
-                        <td>
-                            <select id="tiny_type">
-                                <option value="ip"><?php _e('IPv4 Address', 'my-tiny-vt-scanner'); ?></option>
-                                <option value="url"><?php _e('URL', 'my-tiny-vt-scanner'); ?></option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><?php _e('Target', 'my-tiny-vt-scanner'); ?></th>
-                        <td>
-                            <input type="text" id="tiny_target" class="large-text" placeholder="<?php esc_attr_e('e.g., 1.2.3.4 or https://malicious-site.com', 'my-tiny-vt-scanner'); ?>">
-                        </td>
-                    </tr>
-                </table>
-                <p>
-                    <button class="button button-primary" id="tiny_start_scan"><?php _e('Start Normalized Scan', 'my-tiny-vt-scanner'); ?></button>
+            <div class="tiny-query-container">
+                <div class="tiny-controls">
+                    <h2 style="margin:0; padding:0; font-size:1.2em;">🔍 <?php esc_html_e('Scanner', 'my-tiny-vt-scanner'); ?></h2>
+                    <div class="tiny-input-group">
+                        <input type="text" id="tiny_target" placeholder="<?php esc_attr_e('Enter IP or URL (e.g., 8.8.8.8)', 'my-tiny-vt-scanner'); ?>">
+                        <button class="button button-primary" id="tiny_start_scan" title="<?php esc_attr_e('Start VirusTotal analysis', 'my-tiny-vt-scanner'); ?>"><?php esc_html_e('Scan Now', 'my-tiny-vt-scanner'); ?></button>
+
+                        <!-- 🛠️ Smart Actions (Hidden initially) -->
+                        <span id="tiny_actions" style="display:none; gap:5px;">
+                            <a href="#" id="tiny_btn_shodan" target="_blank" class="button" title="<?php esc_attr_e('Search on Shodan (Opens in a new tab)', 'my-tiny-vt-scanner'); ?>">🕵️ Shodan <span class="dashicons dashicons-external" style="font-size:14px; line-height:26px; vertical-align:middle;"></span></a>
+                            <button id="tiny_btn_copy" class="button" title="<?php esc_attr_e('Copy target to clipboard', 'my-tiny-vt-scanner'); ?>">📋 Copy</button>
+                        </span>
+                    </div>
+                </div>
+                <p class="description" style="margin-top:5px; margin-bottom:0; color:#666; font-size:12px;">
+                    <?php esc_html_e('Auto-detects IP/URL. Results & logs appear below.', 'my-tiny-vt-scanner'); ?>
                 </p>
-                <div id="tiny_scan_result" style="margin-top:20px; padding:15px; background:#f6f7f7; border-left:4px solid #2271b1; display:none; white-space:pre-wrap; font-family:monospace;"></div>
+
+                <!-- 📊 Dashboard Grid Layout -->
+                <div class="tiny-dashboard-grid">
+                    <!-- Left: Scan Result -->
+                    <div class="tiny-col-main">
+                        <div id="tiny_scan_result" class="tiny-card result-card">
+                            <p style="color:#666; font-style:italic; border:none; padding:0; margin:0;"><?php esc_html_e('Ready to scan...', 'my-tiny-vt-scanner'); ?></p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Debug Log -->
+                    <div class="tiny-col-log">
+                        <textarea id="tiny_debug_log" readonly placeholder="Debug logs..."></textarea>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <script>
-            jQuery(document).ready(function($) {
-                $('#tiny_start_scan').on('click', function(e) {
-                    e.preventDefault();
-                    var target = $('#tiny_target').val();
-                    var type = $('#tiny_type').val();
-
-                    $('#tiny_scan_result').show().html('<strong>⏳ ' + '<?php _e("Scanning and analyzing...", "my-tiny-vt-scanner"); ?>' + '</strong>');
-
-                    $.ajax({
-                        url: '/wp-json/tiny-vt/v1/scan',
-                        method: 'POST',
-                        beforeSend: function(xhr) {
-                            xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce("wp_rest"); ?>');
-                        },
-                        data: {
-                            target: target,
-                            type: type
-                        },
-                        success: function(res) {
-                            // REST API 直接回傳資料，不需要像 AJAX 那樣判斷 res.success
-                            var stats = res.last_analysis_stats;
-                            var output = "### " + '<?php _e("Scan Report", "my-tiny-vt-scanner"); ?>' + " ###\n";
-                            output += "📌 " + '<?php _e("Target", "my-tiny-vt-scanner"); ?>' + ": " + target + "\n";
-                            output += "🔴 " + '<?php _e("Malicious", "my-tiny-vt-scanner"); ?>' + ": " + stats.malicious + "\n";
-                            output += "🟠 " + '<?php _e("Suspicious", "my-tiny-vt-scanner"); ?>' + ": " + stats.suspicious + "\n";
-                            output += "🟢 " + '<?php _e("Harmless", "my-tiny-vt-scanner"); ?>' + ": " + stats.harmless + "\n";
-                            output += "⚪ " + '<?php _e("Undetected", "my-tiny-vt-scanner"); ?>' + ": " + stats.undetected + "\n\n";
-                            output += '<?php _e("Detailed results synced to BMI logs.", "my-tiny-vt-scanner"); ?>';
-                            $('#tiny_scan_result').text(output);
-                        },
-                        error: function(xhr) {
-                            // 處理錯誤 (例如 401 沒權限, 400 格式錯誤)
-                            var msg = xhr.responseJSON ? xhr.responseJSON.message : '<?php _e("Unknown Error", "my-tiny-vt-scanner"); ?>';
-                            $('#tiny_scan_result').html('<span style="color:#d63638;">❌ ' + '<?php _e("Scan Failed", "my-tiny-vt-scanner"); ?>' + ': ' + msg + '</span>');
-                        }
-                    });
-                });
-            });
-        </script>
 <?php
     }
 
-    // 📌 5. REST API 核心邏輯 (取代舊的 AJAX)
+    //  5. REST API 核心邏輯 (取代舊的 AJAX)
     // 這是外掛的新「大腦」。
     // 它的工作流程：
     // 1. 檢查資料 (Sanitize) 
@@ -217,7 +229,7 @@ class My_Tiny_VT_Scanner
     public function handle_rest_query(\WP_REST_Request $request)
     {
         $target = sanitize_text_field($request->get_param('target'));
-        $type   = sanitize_text_field($request->get_param('type'));
+        // $type = ... 🗑️ [移除] 不再需要前端告訴我們是什麼
 
         $options = get_option($this->option_name);
         $api_key = $options['api_key'] ?? '';
@@ -226,29 +238,54 @@ class My_Tiny_VT_Scanner
             return new \WP_Error('no_api_key', __('API Key not set.', 'my-tiny-vt-scanner'), ['status' => 400]);
         }
 
-        // --- 🧹 正規化檢查 (Normalization) ---
-        if ($type === 'ip') {
-            $ip_regex = '/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/';
-            if (! preg_match($ip_regex, $target)) {
-                return new \WP_Error('invalid_ip', __('Invalid IPv4 format.', 'my-tiny-vt-scanner'), ['status' => 400]);
-            }
+        // --- 💡 智慧判斷 (Smart Detection) ---
+        // 判斷順序：IP -> Domain -> URL
+
+        $type = 'unknown';
+        $api_url = '';
+        $clean_target = $target; // 用於顯示或進一步處理
+
+        // IP Regex
+        $ip_regex = '/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/';
+
+        if (preg_match($ip_regex, $target)) {
+            // 1. IP
+            $type = 'ip';
             $api_url = "https://www.virustotal.com/api/v3/ip_addresses/{$target}";
         } else {
-            if (! filter_var($target, FILTER_VALIDATE_URL)) {
-                return new \WP_Error('invalid_url', __('Invalid URL format. Please include http:// or https://', 'my-tiny-vt-scanner'), ['status' => 400]);
+            // 先嘗試清理 protocol
+            $clean_target = preg_replace('#^https?://#', '', $target);
+            $clean_target = rtrim($clean_target, '/'); // 移除結尾斜線
+
+            // 判斷是不是單純的 Domain (沒有路徑，沒有 Query)
+            // 簡單判斷：如果不包含 '/' 且看起來像 Domain
+            if (strpos($clean_target, '/') === false) {
+                // 2. Domain (e.g., google.com, sub.test.com)
+                $type = 'domain';
+                $api_url = "https://www.virustotal.com/api/v3/domains/{$clean_target}";
+            } else {
+                // 3. URL (e.g., google.com/foo, http://site.com)
+                $type = 'url';
+
+                // URL 必須要有 protocol，沒有就補上
+                if (strpos($target, 'http') !== 0) {
+                    $target = 'http://' . $target;
+                }
+
+                if (! filter_var($target, FILTER_VALIDATE_URL)) {
+                    return new \WP_Error('invalid_target', __('Invalid format. Please enter a valid IP (8.8.8.8), Domain (example.com), or URL (http://example.com/foo).', 'my-tiny-vt-scanner'), ['status' => 400]);
+                }
+
+                $url_id = rtrim(strtr(base64_encode($target), '+/', '-_'), '=');
+                $api_url = "https://www.virustotal.com/api/v3/urls/{$url_id}";
             }
-            $url_id = rtrim(strtr(base64_encode($target), '+/', '-_'), '=');
-            $api_url = "https://www.virustotal.com/api/v3/urls/{$url_id}";
         }
 
         // --- ⚡ 快取機制 (Caching) ---
-        // 我們用 "transient" (暫存) 來記住結果。
-        // Key 的名字要是唯一的，所以我們把 target 加進去。
-        $cache_key = 'tiny_vt_' . md5($target);
+        $cache_key = 'tiny_vt_' . md5($target . $type); // 加入 type 以防萬一
         $cached_data = get_transient($cache_key);
 
         if ($cached_data) {
-            // [省錢] 找到了！直接回傳，不用花 API 點數。
             return rest_ensure_response($cached_data);
         }
 
@@ -266,6 +303,10 @@ class My_Tiny_VT_Scanner
 
         if (isset($body['data']['attributes'])) {
             $data = $body['data']['attributes'];
+
+            // 🏷️ 注入我們的類型標記 (Frontend 用)
+            $data['_tiny_type'] = $type;
+            $data['_tiny_target_clean'] = $clean_target;
 
             // [存檔] 把結果記下來，保存 1 小時 (3600 秒)
             set_transient($cache_key, $data, 3600);

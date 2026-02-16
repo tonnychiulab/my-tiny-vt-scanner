@@ -1,0 +1,139 @@
+/* API Key Section Styles */
+.tiny-api-form {
+    margin-bottom: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    max-width: 99%;
+    box-sizing: border-box;
+}
+
+.tiny-api-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.tiny-api-label {
+    font-weight: 600;
+    font-size: 14px;
+    min-width: 150px;
+}
+
+.tiny-api-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-grow: 1;
+    max-width: 600px;
+}
+
+.tiny-api-wrapper input {
+    flex-grow: 1;
+    height: 30px;
+}
+
+.tiny-api-container .description {
+    margin: 0 0 0 10px;
+    font-style: italic;
+    color: #666;
+}
+
+/* Scanner Section Styles */
+.tiny-query-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 15px;
+    max-width: 99%;
+    /* Full width */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+}
+
+.tiny-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.tiny-input-group {
+    display: flex;
+    flex-grow: 1;
+    gap: 10px;
+    max-width: 800px;
+}
+
+#tiny_target {
+    flex-grow: 1;
+    padding: 0 10px;
+    height: 30px;
+    line-height: normal;
+}
+
+.tiny-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 50/50 split for better balance */
+    gap: 15px;
+    margin-top: 15px;
+    align-items: stretch;
+    /* Stretch to same height */
+    height: calc(100vh - 250px);
+    /* Fill remaining usage height */
+    min-height: 300px;
+    max-height: 600px;
+    /* Cap it so it doesn't get too crazy */
+}
+
+.tiny-card {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    padding: 10px;
+    border-radius: 4px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    /* Internal scroll */
+}
+
+.result-card {
+    border-left: 4px solid #2271b1;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+#tiny_debug_log {
+    width: 100%;
+    height: 100%;
+    /* Fill container */
+    background: #1d2327;
+    color: #50e3c2;
+    border: 1px solid #000;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    /* Smaller font for logs */
+    padding: 10px;
+    line-height: 1.3;
+    box-sizing: border-box;
+    resize: none;
+    /* No manual resize needed */
+}
+
+/* RWD */
+@media (max-width: 782px) {
+    .tiny-dashboard-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: none;
+    }
+
+    .tiny-card,
+    #tiny_debug_log {
+        min-height: 200px;
+    }
+}

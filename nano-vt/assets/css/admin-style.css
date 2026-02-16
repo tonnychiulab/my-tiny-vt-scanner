@@ -1,0 +1,89 @@
+/* Nano VT Admin CSS */
+.nano-wrap h1 {
+    margin-bottom: 20px;
+}
+
+.nano-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.nano-api-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nano-dashboard {
+    /* Full width optimization */
+    max-width: 100%;
+}
+
+.nano-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+#nano_target {
+    flex: 1;
+    max-width: 600px;
+    height: 40px;
+    font-size: 16px;
+}
+
+#nano_scan_btn {
+    height: 40px;
+    padding: 0 30px;
+    font-size: 15px;
+}
+
+.nano-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    height: 500px;
+    /* Fixed height for dashboard feel */
+}
+
+.nano-result,
+.nano-log {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    padding: 15px;
+    overflow-y: auto;
+    font-family: monospace;
+    white-space: pre-wrap;
+    border-radius: 4px;
+}
+
+.nano-log {
+    background: #1e1e1e;
+    color: #4ec9b0;
+    border-color: #000;
+}
+
+.log-header {
+    background: #333;
+    color: #fff;
+    padding: 5px 10px;
+    margin: -15px -15px 10px -15px;
+    font-family: sans-serif;
+    font-size: 12px;
+}
+
+#nano_log_content {
+    margin: 0;
+    font-family: Consolas, Monaco, monospace;
+}
+
+.nano-placeholder {
+    color: #999;
+    text-align: center;
+    margin-top: 50px;
+    font-style: italic;
+}
